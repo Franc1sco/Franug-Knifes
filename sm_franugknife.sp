@@ -58,7 +58,7 @@ public Action:DID(clientId, args)
 	SetMenuTitle(menu, "Choose you knife");
 	
 	AddMenuItem(menu, "0", "Default knife");
-	AddMenuItem(menu, "516", "Push");
+	AddMenuItem(menu, "516", "Shadow Daggers");
 	AddMenuItem(menu, "509", "Huntsman");
 	AddMenuItem(menu, "507", "Karambit");
 	AddMenuItem(menu, "506", "Gut");
@@ -106,44 +106,6 @@ public OnClientCookiesCached(client)
 	if(strlen(value) > 0) knife[client] = StringToInt(value);
 	else knife[client] = 0;
 }
-
-/* public Action:OnItemPickup(Handle:event, const String:name[], bool:dontBroadcast) 
-{
-	decl String:sWeapon[64];
-	GetEventString(event, "item", sWeapon, sizeof(sWeapon));
-	if (StrEqual(sWeapon, "knife", false)) 
-	{
-		new client = GetClientOfUserId(GetEventInt(event, "userid"));
-		
-		new iWeapon = GetPlayerWeaponSlot(client, CS_SLOT_KNIFE);
-		if (iWeapon != -1) 
-		{
-			if(ZR_IsClientZombie(client)) 
-			{
-				if(zrknife[client] < 1)
-				{
-					new weaponindex = GetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex");
-					if (weaponindex == 42 || weaponindex == 59) SetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex", 507);
-				}
-				else SetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex", zrknife[client]);
-				
-			}
-			else
-			{
-				if(knife[client] < 1)
-				{
-					new weaponindex = GetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex");
-					if (weaponindex == 42 || weaponindex == 59) SetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex", 509);
-				}
-				else SetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex", knife[client]);
-				
-			}
-			//PrintToChatAll("fijado %s", manos[client]);
-		}
-	}
-
-	return Plugin_Continue;
-}  */
 
 DarKnife(client)
 {
