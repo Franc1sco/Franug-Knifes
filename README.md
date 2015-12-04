@@ -1,0 +1,1 @@
+Just type !knife in chat
