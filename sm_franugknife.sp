@@ -7,11 +7,11 @@
 
 public Plugin:myinfo =
 {
-	name = "SM Knifes",
+	name = "SM CS:GO Franug Knives",
 	author = "Franc1sco franug",
 	description = "",
-	version = "1.1",
-	url = "http://www.zeuszombie.com"
+	version = "1.2",
+	url = "http://steamcommunity.com/id/franug"
 };
 
 new knife[MAXPLAYERS+1];
@@ -58,6 +58,7 @@ public Action:DID(clientId, args)
 	SetMenuTitle(menu, "Choose you knife");
 	
 	AddMenuItem(menu, "0", "Default knife");
+	AddMenuItem(menu, "514", "Survival Bowie");
 	AddMenuItem(menu, "516", "Shadow Daggers");
 	AddMenuItem(menu, "509", "Huntsman");
 	AddMenuItem(menu, "507", "Karambit");
