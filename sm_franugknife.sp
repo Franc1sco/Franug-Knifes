@@ -5,6 +5,19 @@
 #include <cstrike>
 #include <clientprefs>
 
+#define MAX_KNIVES 50 //Not sure how many knives will eventually be in the game until its death.
+
+enum KnifeList{
+	String:Name[64],
+	KnifeID
+};
+
+ArrayList KnivesArray;
+char path_knives[PLATFORM_MAX_PATH];
+knives[MAX_KNIVES][KnifeList];
+int knifeCount = 0;
+
+
 public Plugin:myinfo =
 {
 	name = "SM CS:GO Franug Knives",
@@ -30,6 +43,8 @@ public OnPluginStart()
 			OnClientPutInServer(i);
 		}
 	}
+	KnivesArray = new ArrayList(64);
+	loadKnives();
 }
 
 public OnClientPutInServer(client)
@@ -54,25 +69,29 @@ public Action:OnPostWeaponEquip(client, iWeapon)
 
 public Action:DID(clientId, args) 
 {
+	loadKnifeMenu(clientId, -1);
+	return Plugin_Handled;
+}
+
+public void loadKnifeMenu(int clientId, int menuPosition)
+{
 	new Handle:menu = CreateMenu(DIDMenuHandler_h);
 	SetMenuTitle(menu, "Choose you knife");
 	
-	AddMenuItem(menu, "0", "Default knife");
-	AddMenuItem(menu, "514", "Survival Bowie");
-	AddMenuItem(menu, "516", "Shadow Daggers");
-	AddMenuItem(menu, "509", "Huntsman");
-	AddMenuItem(menu, "507", "Karambit");
-	AddMenuItem(menu, "506", "Gut");
-	AddMenuItem(menu, "505", "Flip");
-	AddMenuItem(menu, "508", "M9 Bayonet");
-	AddMenuItem(menu, "500", "Bayonet");
-	AddMenuItem(menu, "515", "Butterfly");
-	AddMenuItem(menu, "512", "Falchion");
+	char item[4];
+	char test[4];
+	for (int i = 1; i < knifeCount; ++i) {
+		Format(item, 4, "%i", i);
+		IntToString(knives[i][KnifeID], test, 4);
+		AddMenuItem(menu, test, knives[i][Name], knife[clientId] == knives[i][KnifeID] ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT);
+	}
 	
 	SetMenuExitButton(menu, true);
-	DisplayMenu(menu, clientId, 0);
 	
-	return Plugin_Handled;
+	if(menuPosition == -1){
+		DisplayMenu(menu, clientId, 0);
+	} else DisplayMenuAtItem(menu, clientId, menuPosition, 0);
+	
 }
 
 public DIDMenuHandler_h(Handle:menu, MenuAction:action, client, itemNum) 
@@ -91,7 +110,7 @@ public DIDMenuHandler_h(Handle:menu, MenuAction:action, client, itemNum)
 		
 		DarKnife(client);
 		
-		DID(client, 0);
+		loadKnifeMenu(client, GetMenuSelectionPosition());
 	}
 	else if (action == MenuAction_End)
 	{
@@ -121,4 +140,26 @@ DarKnife(client)
 		GivePlayerItem(client, "weapon_knife");
 	}
 }
+
+public void loadKnives()
+{
+	BuildPath(Path_SM, path_knives, sizeof(path_knives), "configs/csgo_knives.cfg");
+	decl Handle:kv;
+	kv = CreateKeyValues("Knives");
+	knifeCount = 1;
+	ClearArray(KnivesArray);
+	FileToKeyValues(kv, path_knives);
+	if (!KvGotoFirstSubKey(kv)) CloseHandle(kv);
 	
+	do {
+		KvGetSectionName(kv, knives[knifeCount][Name], 64);
+		knives[knifeCount][KnifeID] = KvGetNum(kv, "KnifeID", 0);
+		PushArrayString(KnivesArray, knives[knifeCount][Name]);
+		knifeCount++;
+	} while (KvGotoNextKey(kv));
+	
+	CloseHandle(kv);
+	for (int i=knifeCount; i<MAX_KNIVES; ++i) {
+		knives[i][Name] = 0;
+	}
+}
