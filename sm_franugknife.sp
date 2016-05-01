@@ -1,11 +1,26 @@
-#pragma semicolon 1
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
 #include <cstrike>
 #include <clientprefs>
 
-public Plugin:myinfo =
+#pragma semicolon 1
+#pragma newdecls required
+
+#define MAX_KNIVES 50 //Not sure how many knives will eventually be in the game until its death.
+
+enum KnifeList{
+	String:Name[64],
+	KnifeID
+};
+
+ArrayList KnivesArray;
+char path_knives[PLATFORM_MAX_PATH];
+knives[MAX_KNIVES][KnifeList];
+int knifeCount = 0;
+
+
+public Plugin myinfo =
 {
 	name = "SM CS:GO Franug Knives",
 	author = "Franc1sco franug",
@@ -14,32 +29,34 @@ public Plugin:myinfo =
 	url = "http://steamcommunity.com/id/franug"
 };
 
-new knife[MAXPLAYERS+1];
+int knife[MAXPLAYERS+1];
 
-new Handle:c_knife;
+Handle c_knife;
 
-public OnPluginStart() 
+public void OnPluginStart() 
 {
 	c_knife = RegClientCookie("hknife", "", CookieAccess_Private);
 	
 	RegConsoleCmd("sm_knife", DID);
 	
-	for (new i = 1; i <= MaxClients; i++) {
+	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && !IsFakeClient(i) && AreClientCookiesCached(i)) {
 			OnClientCookiesCached(i);
 			OnClientPutInServer(i);
 		}
 	}
+	KnivesArray = new ArrayList(64);
+	loadKnives();
 }
 
-public OnClientPutInServer(client)
+public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponEquip, OnPostWeaponEquip);
 }
 
-public Action:OnPostWeaponEquip(client, iWeapon)
+public Action OnPostWeaponEquip(int client, int iWeapon)
 {
-	decl String:Classname[64];
+	char Classname[64];
 	if(!GetEdictClassname(iWeapon, Classname, 64) || StrContains(Classname, "weapon_knife", false) != 0)
 	{
 		return;
@@ -52,67 +69,67 @@ public Action:OnPostWeaponEquip(client, iWeapon)
 
 }
 
-public Action:DID(clientId, args) 
+public Action DID(int clientId, int args) 
 {
-	new Handle:menu = CreateMenu(DIDMenuHandler_h);
-	SetMenuTitle(menu, "Choose you knife");
-	
-	AddMenuItem(menu, "0", "Default knife");
-	AddMenuItem(menu, "514", "Survival Bowie");
-	AddMenuItem(menu, "516", "Shadow Daggers");
-	AddMenuItem(menu, "509", "Huntsman");
-	AddMenuItem(menu, "507", "Karambit");
-	AddMenuItem(menu, "506", "Gut");
-	AddMenuItem(menu, "505", "Flip");
-	AddMenuItem(menu, "508", "M9 Bayonet");
-	AddMenuItem(menu, "500", "Bayonet");
-	AddMenuItem(menu, "515", "Butterfly");
-	AddMenuItem(menu, "512", "Falchion");
-	
-	SetMenuExitButton(menu, true);
-	DisplayMenu(menu, clientId, 0);
-	
+	loadKnifeMenu(clientId, -1);
 	return Plugin_Handled;
 }
 
-public DIDMenuHandler_h(Handle:menu, MenuAction:action, client, itemNum) 
+public void loadKnifeMenu(int clientId, int menuPosition)
+{
+	Menu menu = CreateMenu(DIDMenuHandler_h);
+	menu.SetTitle("Choose you knife");
+	
+	char item[4];
+	char test[4];
+	for (int i = 1; i < knifeCount; ++i) {
+		Format(item, 4, "%i", i);
+		IntToString(knives[i][KnifeID], test, 4);
+		menu.AddItem(test, knives[i][Name], knife[clientId] == knives[i][KnifeID] ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT);
+	}
+	
+	SetMenuExitButton(menu, true);
+	
+	if(menuPosition == -1){
+		menu.Display(clientId, 0);
+	} else menu.DisplayAt(clientId, menuPosition, 0);
+	
+}
+
+public int DIDMenuHandler_h(Menu menu, MenuAction action, int client, int itemNum) 
 {
 	if ( action == MenuAction_Select ) 
 	{
-		new String:info[32];
+		char info[32];
 		
-		GetMenuItem(menu, itemNum, info, sizeof(info));
+		menu.GetItem(itemNum, info, sizeof(info));
 
 		knife[client] = StringToInt(info);
 		
-		new String:cookie[8];
+		char cookie[8];
 		IntToString(knife[client], cookie, 8);
 		SetClientCookie(client, c_knife, cookie);
 		
 		DarKnife(client);
 		
-		DID(client, 0);
-	}
-	else if (action == MenuAction_End)
-	{
-		CloseHandle(menu);
-	}
+		loadKnifeMenu(client, GetMenuSelectionPosition());
+	} else if(action == MenuAction_End) delete menu;
 }
 
 
-public OnClientCookiesCached(client)
+public void OnClientCookiesCached(int client)
 {
-	new String:value[16];
+	char value[16];
 	GetClientCookie(client, c_knife, value, sizeof(value));
 	if(strlen(value) > 0) knife[client] = StringToInt(value);
 	else knife[client] = 0;
 }
 
-DarKnife(client)
+public void DarKnife(int client)
 {
 	if(!IsPlayerAlive(client)) return;
 	
-	new iWeapon = GetPlayerWeaponSlot(client, CS_SLOT_KNIFE);
+	int iWeapon = GetPlayerWeaponSlot(client, CS_SLOT_KNIFE);
 	if (iWeapon != -1) 
 	{
 		RemovePlayerItem(client, iWeapon);
@@ -121,4 +138,27 @@ DarKnife(client)
 		GivePlayerItem(client, "weapon_knife");
 	}
 }
+
+public void loadKnives()
+{
+	BuildPath(Path_SM, path_knives, sizeof(path_knives), "configs/csgo_knives.cfg");
+	KeyValues kv = new KeyValues("Knives");
+	knifeCount = 1;
+	ClearArray(KnivesArray);
 	
+	kv.ImportFromFile(path_knives);
+	
+	if (!kv.GotoFirstSubKey()) delete kv;
+	
+	do {
+		kv.GetSectionName(knives[knifeCount][Name], 64);
+		knives[knifeCount][KnifeID] = kv.GetNum("KnifeID", 0);
+		PushArrayString(KnivesArray, knives[knifeCount][Name]);
+		knifeCount++;
+	} while (kv.GotoNextKey());
+	
+	delete kv;
+	for (int i=knifeCount; i<MAX_KNIVES; ++i) {
+		knives[i][Name] = 0;
+	}
+}
