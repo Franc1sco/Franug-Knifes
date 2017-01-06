@@ -1,7 +1,9 @@
-# NEW NOTICE! New private version 2.X
+# NEW NOTICE! New private version 3.X
 
 The new private version have:
 
+
+-Fix console spam errors.
 
 -Flag support for each knife.
 
